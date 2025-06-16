@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Музыкальная игра</title>
+</head>
+<body>
+  <h1>Музыкальная игра</h1>
+
+  <button onclick="playForClients('8_3_10.wav')">▶ Играть 8_3_10.wav</button>
+  <button onclick="playForClients('8_3_20.wav')">▶ Играть 8_3_20.wav</button>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    socket.on('play-song', (data) => {
+      const audio = new Audio(data.file);
+      audio.play();
+    });
+
+    function playForClients(file) {
+      socket.emit('play-song', { file });
+    }
+  </script>
+</body>
+</html>

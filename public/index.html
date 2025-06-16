@@ -3,24 +3,151 @@
 <head>
   <meta charset="UTF-8">
   <title>Музыкальная игра</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 1rem;
+    }
+    .player {
+      margin-bottom: 0.5rem;
+    }
+    .alt {
+      background-color: #f0f0f0;
+      padding: 0.5rem;
+      border-radius: 5px;
+    }
+    .score-controls {
+      margin-bottom: 1rem;
+    }
+    .fixed-score {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background: #fff3cd;
+      border-top: 2px solid #ffc107;
+      padding: 1rem;
+      text-align: center;
+      font-weight: bold;
+      z-index: 999;
+    }
+    .round {
+      border: 1px solid #ccc;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      border-radius: 8px;
+      background-color: #fafafa;
+    }
+    .block-buttons {
+      margin-top: 0.5rem;
+    }
+    .player-label {
+      font-size: 0.9rem;
+      margin-bottom: 0.2rem;
+    }
+  </style>
 </head>
 <body>
   <h1>Музыкальная игра</h1>
+  
+  <div>
+    <label>Имя игрока: <input type="text" id="playerName" value="Игрок 1"></label>
+    <label>Очки: <input type="number" id="score" value="0"></label>
+    <button onclick="updateScore(1000)">+1000</button>
+    <button onclick="updateScore(-500)">-500</button>
+    <button onclick="updateScore(-1000)">-1000</button>
+    <button onclick="resetAll()">Сброс</button>
+  </div>
 
-  <button onclick="playForClients('8_3_10.wav')">▶ Играть 8_3_10.wav</button>
-  <button onclick="playForClients('8_3_20.wav')">▶ Играть 8_3_20.wav</button>
+  <div id="roundsContainer"></div>
 
-  <script src="/socket.io/socket.io.js"></script>
+  <div class="fixed-score">Текущие очки: <span id="fixedScore">0</span></div>
+
   <script>
-    const socket = io();
+    let score = 0;
 
-    socket.on('play-song', (data) => {
-      const audio = new Audio(data.file);
-      audio.play();
-    });
+    function updateScore(amount) {
+      score += amount;
+      document.getElementById('score').value = score;
+      document.getElementById('fixedScore').textContent = score;
+    }
 
-    function playForClients(file) {
-      socket.emit('play-song', { file });
+    function resetAll() {
+      document.getElementById('playerName').value = '';
+      score = 0;
+      document.getElementById('score').value = 0;
+      document.getElementById('fixedScore').textContent = 0;
+    }
+
+    function createPlayer(label, src, isAlt) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'player' + (isAlt ? ' alt' : '');
+
+      const lbl = document.createElement('div');
+      lbl.className = 'player-label';
+      lbl.textContent = label;
+
+      const audio = document.createElement('audio');
+      audio.controls = true;
+      const source = document.createElement('source');
+      source.src = src;
+      source.type = 'audio/wav';
+      audio.appendChild(source);
+
+      wrapper.appendChild(lbl);
+      wrapper.appendChild(audio);
+      return wrapper;
+    }
+
+    function createRoundBlock(roundNumber) {
+      const block = document.createElement('div');
+      block.className = 'round';
+
+      const title = document.createElement('h2');
+      title.textContent = `Раунд ${roundNumber}`;
+      block.appendChild(title);
+
+      const players = [
+        [`Песня №1, 10 секунд`, `${roundNumber}_1_10.wav`],
+        [`Песня №1, 20 секунд`, `${roundNumber}_1_20.wav`],
+        [`Песня №2, 10 секунд`, `${roundNumber}_2_10.wav`],
+        [`Песня №2, 20 секунд`, `${roundNumber}_2_20.wav`],
+      ];
+
+      players.forEach(([label, src], i) => {
+        block.appendChild(createPlayer(label, src, i % 2 === 1));
+      });
+
+      // В 8 раунде добавим ещё 2 плеера
+      if (roundNumber === 8) {
+        block.appendChild(createPlayer('Песня №3, 10 секунд', `8_3_10.wav`, true));
+        block.appendChild(createPlayer('Песня №3, 20 секунд', `8_3_20.wav`, false));
+      }
+
+      const btns = document.createElement('div');
+      btns.className = 'block-buttons';
+      const plus = document.createElement('button');
+      plus.textContent = '+1000';
+      plus.onclick = () => updateScore(1000);
+      const minus500 = document.createElement('button');
+      minus500.textContent = '-500';
+      minus500.onclick = () => updateScore(-500);
+      const minus1000 = document.createElement('button');
+      minus1000.textContent = '-1000';
+      minus1000.onclick = () => updateScore(-1000);
+
+      btns.appendChild(plus);
+      btns.appendChild(minus500);
+      btns.appendChild(minus1000);
+      block.appendChild(btns);
+
+      return block;
+    }
+
+    // Генерация 17 раундов
+    const container = document.getElementById('roundsContainer');
+    for (let i = 1; i <= 17; i++) {
+      container.appendChild(createRoundBlock(i));
     }
   </script>
 </body>

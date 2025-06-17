@@ -148,16 +148,16 @@
       block.innerHTML = `<h4>Раунд ${i}</h4>`;
 
       const files = [
-        { src: `audio/${i}_1_10.wav`, label: "Песня №1, 10 секунд" },
-        { src: `audio/${i}_2_10.wav`, label: "Песня №2, 10 секунд" },
-        { src: `audio/${i}_1_20.wav`, label: "Песня №1, 20 секунд" },
-        { src: `audio/${i}_2_20.wav`, label: "Песня №2, 20 секунд" }
+        { src: `${i}_1_10.wav`, label: "Песня №1, 10 секунд" },
+        { src: `${i}_2_10.wav`, label: "Песня №2, 10 секунд" },
+        { src: `${i}_1_20.wav`, label: "Песня №1, 20 секунд" },
+        { src: `${i}_2_20.wav`, label: "Песня №2, 20 секунд" }
       ];
 
       if (i === 8) {
         files.push(
-          { src: `audio/8_3_10.wav`, label: "Песня №3, 10 секунд" },
-          { src: `audio/8_3_20.wav`, label: "Песня №3, 20 секунд" }
+          { src: `8_3_10.wav`, label: "Песня №3, 10 секунд" },
+          { src: `8_3_20.wav`, label: "Песня №3, 20 секунд" }
         );
       }
 

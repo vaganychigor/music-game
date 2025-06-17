@@ -200,6 +200,36 @@
 
       audioSection.appendChild(block);
     }
+    const socket = io();
+let isHost = false;
+
+document.getElementById('hostBtn').onclick = () => {
+  isHost = true;
+};
+
+document.getElementById('clientBtn').onclick = () => {
+  isHost = false;
+};
+
+// При нажатии на ▶, только хост может инициировать воспроизведение
+function playTrack(filename) {
+  if (!isHost) return;
+  socket.emit('playTrack', filename);
+  playAudio(filename); // для локального воспроизведения у хоста
+}
+
+// Локальный проигрыватель
+function playAudio(file) {
+  const player = document.getElementById('player');
+  player.src = file;
+  player.play();
+}
+
+// Когда клиент получает команду на проигрывание
+socket.on('playTrack', (file) => {
+  if (!isHost) playAudio(file);
+});
+
   </script>
 </body>
 </html>

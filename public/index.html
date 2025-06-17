@@ -237,9 +237,12 @@ socket.on('playTrack', (file) => {
 });
 
   </script>
-  <script src="/socket.io/socket.io.js"></script>
+ <!-- 1. Подключаем socket.io -->
+<script src="/socket.io/socket.io.js"></script>
+
+<!-- 2. Подключаем основной JS -->
 <script>
-  const socket = io();
+  const socket = io(); // ← подключён после socket.io.js
   let isHost = false;
 
   document.getElementById('hostBtn').onclick = () => {

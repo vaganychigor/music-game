@@ -4,53 +4,130 @@
   <meta charset="UTF-8" />
   <title>Музыкальная Игра</title>
   <style>
+    :root {
+      --primary: #4a90e2;
+      --light: #f9f9f9;
+      --dark: #2c3e50;
+      --accent: #ecf0f1;
+      --highlight: #d0ebff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: sans-serif;
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: var(--light);
+      color: var(--dark);
     }
 
     #roleSelect {
       position: fixed;
-      top: 20px;
-      left: 20px;
+      top: 30px;
+      left: 30px;
       background: white;
-      padding: 10px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      padding: 20px;
       z-index: 999;
     }
 
+    #roleSelect button {
+      font-size: 16px;
+      margin: 5px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      background-color: var(--primary);
+      color: white;
+      cursor: pointer;
+    }
+
+    #roleSelect button:hover {
+      background-color: #357ab8;
+    }
+
+    h1 {
+      margin-top: 30px;
+      font-size: 32px;
+      text-align: center;
+    }
+
     .player-block {
-      margin-bottom: 20px;
-      border: 1px solid #ccc;
-      padding: 10px;
+      margin: 20px auto;
+      padding: 20px;
+      max-width: 900px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    .player-block h3 {
+      margin-bottom: 15px;
     }
 
     .player-block button {
-      margin: 5px;
+      margin: 8px 5px;
+      padding: 8px 16px;
+      font-size: 14px;
+      border: none;
+      border-radius: 8px;
+      background-color: var(--primary);
+      color: white;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .player-block button.highlight {
+      background-color: #6c5ce7;
+    }
+
+    .player-block button:hover {
+      opacity: 0.9;
+    }
+
+    input[type="text"], input[type="number"] {
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      margin-right: 10px;
+      font-size: 14px;
     }
 
     #scoreDisplay {
       position: fixed;
       bottom: 0;
       left: 0;
-      background: rgba(255,255,255,0.95);
-      padding: 10px;
+      background: rgba(255,255,255,0.98);
+      padding: 10px 0;
       width: 100%;
       text-align: center;
-      font-size: 18px;
+      font-size: 20px;
+      font-weight: bold;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
       z-index: 1000;
     }
 
-    .highlight {
-      background-color: #e0f7fa;
-    }
-
-    #playerNameInput {
-      margin: 10px 0;
-    }
-
     #clientView {
-      padding: 40px;
-      font-size: 24px;
+      padding: 100px 20px;
       text-align: center;
+    }
+
+    #clientView #clientName {
+      font-size: 28px;
+      margin-bottom: 20px;
+    }
+
+    #clientView #clientScore {
+      font-size: 36px;
+      font-weight: bold;
+    }
+
+    label {
+      font-size: 14px;
+      margin-right: 5px;
     }
   </style>
 </head>
@@ -63,19 +140,17 @@
   <div id="hostView" style="display:none;">
     <h1>Музыкальная Игра</h1>
 
-  <div>
-    <label>Имя игрока:
-      <input id="playerNameInput" type="text" />
-    </label>
-    <button onclick="sendName()">Сохранить</button>
-  </div>
-  
-  <div style="margin-top: 10px;">
-    <label>Очки вручную:
-      <input id="manualScoreInput" type="number" />
-    </label>
-    <button onclick="setManualScore()">Установить</button>
-  </div>
+    <div style="text-align: center; margin-bottom: 20px;">
+      <label>Имя игрока:
+        <input id="playerNameInput" type="text" />
+      </label>
+      <button onclick="sendName()">Сохранить</button>
+      <br /><br />
+      <label>Очки вручную:
+        <input id="manualScoreInput" type="number" />
+      </label>
+      <button onclick="setManualScore()">Установить</button>
+    </div>
 
     <div id="playersContainer"></div>
   </div>
@@ -88,7 +163,7 @@
   <audio id="player" controls style="display:none;"></audio>
 
   <div id="scoreDisplay">
-    <strong>Очки игрока:</strong> <span id="score">0</span>
+    Очки игрока: <span id="score">0</span>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
@@ -116,11 +191,6 @@
       }
     }
 
-    function setScore(newScore) {
-      score = newScore;
-      scoreEl.textContent = score;
-    }
-
     function playTrack(filename) {
       if (!isHost) return;
       socket.emit('playTrack', filename);
@@ -138,7 +208,6 @@
       socket.emit('nameUpdate', playerName);
     }
 
-    // Socket events
     socket.on('playTrack', file => {
       if (!isHost) playAudio(file);
     });
@@ -155,7 +224,6 @@
       }
     });
 
-    // Role selection
     document.getElementById('hostBtn').onclick = () => {
       isHost = true;
       document.getElementById('roleSelect').style.display = 'none';
@@ -169,7 +237,6 @@
       document.getElementById('scoreDisplay').style.display = 'none';
     };
 
-    // Host interface generation
     const playersContainer = document.getElementById('playersContainer');
 
     for (let round = 1; round <= 17; round++) {
@@ -204,7 +271,6 @@
         <button onclick="updateScore(-1000)">-1000</button>
       `;
       block.appendChild(controls);
-
       playersContainer.appendChild(block);
     }
   </script>

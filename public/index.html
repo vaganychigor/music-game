@@ -1,274 +1,135 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Счётчик очков + Аудио</title>
+  <meta charset="UTF-8" />
+  <title>Музыкальная Игра</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-      max-width: 800px;
-      margin: auto;
+    #roleSelect {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: white;
+      padding: 10px;
+      z-index: 999;
     }
-    input, button {
-      padding: 8px;
-      margin: 5px 0;
-      width: 100%;
-      font-size: 16px;
-    }
-    .buttons {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 10px;
-    }
-    .buttons button {
-      flex: 1 1 45%;
-    }
-    .reset-button {
-      margin-top: 15px;
-      background-color: #e74c3c;
-      color: white;
-    }
-    .audio-section {
-      margin-top: 40px;
-    }
-    .audio-block {
+
+    .player-block {
+      margin-bottom: 20px;
       border: 1px solid #ccc;
       padding: 10px;
-      margin-bottom: 15px;
-      border-radius: 8px;
     }
-    .audio-block h4 {
-      margin-bottom: 10px;
+
+    .player-block button {
+      margin: 5px;
     }
-    .audio-wrapper {
-      margin-bottom: 10px;
-      padding: 5px;
-      border-radius: 6px;
-    }
-    .audio-wrapper:nth-child(even) {
-      background-color: #f0f0f0;
-    }
-    .audio-label {
-      font-weight: bold;
-      margin-bottom: 4px;
-      display: block;
-    }
-    audio {
-      display: block;
-      width: 100%;
-    }
-    .block-buttons {
-      display: flex;
-      gap: 8px;
-      margin-top: 10px;
-    }
-    .block-buttons button {
-      flex: 1;
-      font-size: 14px;
-    }
-    .score-fixed {
+
+    #scoreDisplay {
       position: fixed;
       bottom: 0;
       left: 0;
+      background: rgba(255,255,255,0.9);
+      padding: 10px;
       width: 100%;
-      background: rgba(0, 0, 0, 0.75);
-      color: #fff;
       text-align: center;
-      padding: 10px 0;
-      font-size: 18px;
-      font-weight: bold;
-      z-index: 999;
+      z-index: 1000;
+    }
+
+    .highlight {
+      background-color: #e0f7fa;
     }
   </style>
 </head>
 <body>
-  <audio id="player" style="display: none;"></audio>
   <div id="roleSelect">
-  <h2>Выберите роль</h2>
-  <button id="hostBtn">Я — Хост</button>
-  <button id="clientBtn">Я — Игрок</button>
-</div>
-  <h2>Счётчик очков</h2>
-
-  <label for="playerName">Имя игрока:</label>
-  <input type="text" id="playerName" placeholder="Введите имя" oninput="updatePlayerName()">
-  <h3 id="displayName">Игрок: ---</h3>
-
-  <label for="scoreInput">Очки:</label>
-  <input type="number" id="scoreInput" value="0" oninput="manualScoreChange()">
-
-  <div class="buttons">
-    <button onclick="changeScore(1000)">+1000</button>
-    <button onclick="changeScore(-500)">-500</button>
-    <button onclick="changeScore(-1000)">-1000</button>
-    <button class="reset-button" onclick="resetAll()">Сбросить всё</button>
+    <button id="hostBtn">Я — Хост</button>
+    <button id="clientBtn">Я — Игрок</button>
   </div>
 
-  <div class="audio-section" id="audioSection"></div>
+  <h1>Музыкальная Игра</h1>
 
-  <!-- Фиксированное отображение очков -->
-  <div class="score-fixed" id="fixedScoreDisplay">Очки: 0</div>
- <!-- 1. Подключаем socket.io -->
-<script src="/socket.io/socket.io.js"></script>
+  <div id="playersContainer"></div>
 
-<!-- 2. Подключаем основной JS -->
-<script>
-  const socket = io(); // ← подключён после socket.io.js
-  let isHost = false;
+  <audio id="player" controls style="display:none;"></audio>
 
-  document.getElementById('hostBtn').onclick = () => {
-    isHost = true;
-    document.getElementById('roleSelect').style.display = 'none';
-  };
+  <div id="scoreDisplay">
+    <strong>Очки игрока:</strong> <span id="score">0</span>
+  </div>
 
-  document.getElementById('clientBtn').onclick = () => {
-    isHost = false;
-    document.getElementById('roleSelect').style.display = 'none';
-  };
-
-  function playTrack(filename) {
-    if (!isHost) return;
-    socket.emit('playTrack', filename);
-    playAudio(filename);
-  }
-
-  function playAudio(file) {
-    const player = document.getElementById('player');
-    player.src = file;
-    player.play();
-  }
-
-  socket.on('playTrack', (file) => {
-    if (!isHost) playAudio(file);
-  });
-</script>
+  <script src="/socket.io/socket.io.js"></script>
   <script>
+    const socket = io();
+    let isHost = false;
     let score = 0;
+    const scoreEl = document.getElementById('score');
 
-    function updatePlayerName() {
-      const name = document.getElementById('playerName').value;
-      document.getElementById('displayName').textContent = `Игрок: ${name || "---"}`;
-    }
-
-    function changeScore(amount) {
+    function updateScore(amount) {
       score += amount;
-      updateScoreDisplay();
+      scoreEl.textContent = score;
     }
 
-    function manualScoreChange() {
-      const input = document.getElementById('scoreInput');
-      score = parseInt(input.value) || 0;
-      updateFixedScore();
+    function playTrack(filename) {
+      if (!isHost) return;
+      socket.emit('playTrack', filename);
+      playAudio(filename);
     }
 
-    function updateScoreDisplay() {
-      document.getElementById('scoreInput').value = score;
-      updateFixedScore();
+    function playAudio(file) {
+      const player = document.getElementById('player');
+      player.src = file;
+      player.play();
     }
 
-    function updateFixedScore() {
-      document.getElementById('fixedScoreDisplay').textContent = `Очки: ${score}`;
-    }
+    socket.on('playTrack', file => {
+      if (!isHost) playAudio(file);
+    });
 
-    function resetAll() {
-      score = 0;
-      document.getElementById('playerName').value = '';
-      document.getElementById('displayName').textContent = 'Игрок: ---';
-      updateScoreDisplay();
-    }
+    document.getElementById('hostBtn').onclick = () => {
+      isHost = true;
+      document.getElementById('roleSelect').style.display = 'none';
+    };
 
-    const audioSection = document.getElementById("audioSection");
+    document.getElementById('clientBtn').onclick = () => {
+      isHost = false;
+      document.getElementById('roleSelect').style.display = 'none';
+    };
 
-    for (let i = 1; i <= 17; i++) {
-      const block = document.createElement("div");
-      block.className = "audio-block";
-      block.innerHTML = `<h4>Раунд ${i}</h4>`;
+    const playersContainer = document.getElementById('playersContainer');
 
-      const files = [
-        { src: `${i}_1_10.wav`, label: "Песня №1, 10 секунд" },
-        { src: `${i}_2_10.wav`, label: "Песня №2, 10 секунд" },
-        { src: `${i}_1_20.wav`, label: "Песня №1, 20 секунд" },
-        { src: `${i}_2_20.wav`, label: "Песня №2, 20 секунд" }
+    for (let round = 1; round <= 17; round++) {
+      const block = document.createElement('div');
+      block.className = 'player-block';
+      block.innerHTML = `<h3>Раунд ${round}</h3>`;
+
+      const tracks = [
+        [`${round}_1_10.wav`, 'Песня №1, 10 секунд'],
+        [`${round}_1_20.wav`, 'Песня №1, 20 секунд'],
+        [`${round}_2_10.wav`, 'Песня №2, 10 секунд'],
+        [`${round}_2_20.wav`, 'Песня №2, 20 секунд']
       ];
 
-      if (i === 8) {
-        files.push(
-          { src: `8_3_10.wav`, label: "Песня №3, 10 секунд" },
-          { src: `8_3_20.wav`, label: "Песня №3, 20 секунд" }
-        );
+      if (round === 8) {
+        tracks.push([`${round}_3_10.wav`, 'Песня №3, 10 секунд']);
+        tracks.push([`${round}_3_20.wav`, 'Песня №3, 20 секунд']);
       }
 
-      files.forEach((file, index) => {
-        const wrapper = document.createElement("div");
-        wrapper.className = "audio-wrapper";
-
-        const label = document.createElement("span");
-        label.className = "audio-label";
-        label.textContent = file.label;
-
-        const audio = document.createElement("audio");
-        audio.controls = true;
-        audio.src = file.src;
-
-        wrapper.appendChild(label);
-        wrapper.appendChild(audio);
-        block.appendChild(wrapper);
+      tracks.forEach(([filename, label], idx) => {
+        const btn = document.createElement('button');
+        btn.textContent = `▶ ${label}`;
+        if (idx % 2 === 1) btn.classList.add('highlight');
+        btn.onclick = () => playTrack(filename);
+        block.appendChild(btn);
       });
 
-      const btnGroup = document.createElement("div");
-      btnGroup.className = "block-buttons";
+      const controls = document.createElement('div');
+      controls.innerHTML = `
+        <button onclick="updateScore(1000)">+1000</button>
+        <button onclick="updateScore(-500)">-500</button>
+        <button onclick="updateScore(-1000)">-1000</button>
+      `;
+      block.appendChild(controls);
 
-      const btnPlus = document.createElement("button");
-      btnPlus.textContent = "+1000";
-      btnPlus.onclick = () => changeScore(1000);
-
-      const btnMinus500 = document.createElement("button");
-      btnMinus500.textContent = "-500";
-      btnMinus500.onclick = () => changeScore(-500);
-
-      const btnMinus1000 = document.createElement("button");
-      btnMinus1000.textContent = "-1000";
-      btnMinus1000.onclick = () => changeScore(-1000);
-
-      btnGroup.appendChild(btnPlus);
-      btnGroup.appendChild(btnMinus500);
-      btnGroup.appendChild(btnMinus1000);
-      block.appendChild(btnGroup);
-
-      audioSection.appendChild(block);
+      playersContainer.appendChild(block);
     }
-let isHost = false;
-
-document.getElementById('hostBtn').onclick = () => {
-  isHost = true;
-};
-
-document.getElementById('clientBtn').onclick = () => {
-  isHost = false;
-};
-
-// При нажатии на ▶, только хост может инициировать воспроизведение
-function playTrack(filename) {
-  if (!isHost) return;
-  socket.emit('playTrack', filename);
-  playAudio(filename); // для локального воспроизведения у хоста
-}
-
-// Локальный проигрыватель
-function playAudio(file) {
-  const player = document.getElementById('player');
-  player.src = file;
-  player.play();
-}
-
-// Когда клиент получает команду на проигрывание
-socket.on('playTrack', (file) => {
-  if (!isHost) playAudio(file);
-});
-
   </script>
-
 </body>
 </html>

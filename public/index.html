@@ -110,7 +110,40 @@
 
   <!-- Фиксированное отображение очков -->
   <div class="score-fixed" id="fixedScoreDisplay">Очки: 0</div>
+ <!-- 1. Подключаем socket.io -->
+<script src="/socket.io/socket.io.js"></script>
 
+<!-- 2. Подключаем основной JS -->
+<script>
+  const socket = io(); // ← подключён после socket.io.js
+  let isHost = false;
+
+  document.getElementById('hostBtn').onclick = () => {
+    isHost = true;
+    document.getElementById('roleSelect').style.display = 'none';
+  };
+
+  document.getElementById('clientBtn').onclick = () => {
+    isHost = false;
+    document.getElementById('roleSelect').style.display = 'none';
+  };
+
+  function playTrack(filename) {
+    if (!isHost) return;
+    socket.emit('playTrack', filename);
+    playAudio(filename);
+  }
+
+  function playAudio(file) {
+    const player = document.getElementById('player');
+    player.src = file;
+    player.play();
+  }
+
+  socket.on('playTrack', (file) => {
+    if (!isHost) playAudio(file);
+  });
+</script>
   <script>
     let score = 0;
 
@@ -237,39 +270,6 @@ socket.on('playTrack', (file) => {
 });
 
   </script>
- <!-- 1. Подключаем socket.io -->
-<script src="/socket.io/socket.io.js"></script>
 
-<!-- 2. Подключаем основной JS -->
-<script>
-  const socket = io(); // ← подключён после socket.io.js
-  let isHost = false;
-
-  document.getElementById('hostBtn').onclick = () => {
-    isHost = true;
-    document.getElementById('roleSelect').style.display = 'none';
-  };
-
-  document.getElementById('clientBtn').onclick = () => {
-    isHost = false;
-    document.getElementById('roleSelect').style.display = 'none';
-  };
-
-  function playTrack(filename) {
-    if (!isHost) return;
-    socket.emit('playTrack', filename);
-    playAudio(filename);
-  }
-
-  function playAudio(file) {
-    const player = document.getElementById('player');
-    player.src = file;
-    player.play();
-  }
-
-  socket.on('playTrack', (file) => {
-    if (!isHost) playAudio(file);
-  });
-</script>
 </body>
 </html>

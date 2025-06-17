@@ -9,6 +9,14 @@ io.on('connection', socket => {
   socket.on('playTrack', file => {
     socket.broadcast.emit('playTrack', file);
   });
+
+  socket.on('scoreUpdate', score => {
+    socket.broadcast.emit('scoreUpdate', score);
+  });
+
+  socket.on('nameUpdate', name => {
+    socket.broadcast.emit('nameUpdate', name);
+  });
 });
 
 const PORT = process.env.PORT || 3000;

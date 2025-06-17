@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <title>Музыкальная Игра</title>
   <style>
+    body {
+      font-family: sans-serif;
+    }
+
     #roleSelect {
       position: fixed;
       top: 20px;
@@ -27,15 +31,26 @@
       position: fixed;
       bottom: 0;
       left: 0;
-      background: rgba(255,255,255,0.9);
+      background: rgba(255,255,255,0.95);
       padding: 10px;
       width: 100%;
       text-align: center;
+      font-size: 18px;
       z-index: 1000;
     }
 
     .highlight {
       background-color: #e0f7fa;
+    }
+
+    #playerNameInput {
+      margin: 10px 0;
+    }
+
+    #clientView {
+      padding: 40px;
+      font-size: 24px;
+      text-align: center;
     }
   </style>
 </head>
@@ -45,9 +60,21 @@
     <button id="clientBtn">Я — Игрок</button>
   </div>
 
-  <h1>Музыкальная Игра</h1>
+  <div id="hostView" style="display:none;">
+    <h1>Музыкальная Игра</h1>
 
-  <div id="playersContainer"></div>
+    <div>
+      <label>Имя игрока: <input id="playerNameInput" type="text" /></label>
+      <button onclick="sendName()">Сохранить</button>
+    </div>
+
+    <div id="playersContainer"></div>
+  </div>
+
+  <div id="clientView" style="display:none;">
+    <div id="clientName">Имя: Игрок</div>
+    <div id="clientScore">Очки: 0</div>
+  </div>
 
   <audio id="player" controls style="display:none;"></audio>
 
@@ -60,10 +87,18 @@
     const socket = io();
     let isHost = false;
     let score = 0;
+    let playerName = 'Игрок';
     const scoreEl = document.getElementById('score');
+    const playerNameInput = document.getElementById('playerNameInput');
 
     function updateScore(amount) {
       score += amount;
+      scoreEl.textContent = score;
+      socket.emit('scoreUpdate', score);
+    }
+
+    function setScore(newScore) {
+      score = newScore;
       scoreEl.textContent = score;
     }
 
@@ -79,20 +114,43 @@
       player.play();
     }
 
+    function sendName() {
+      playerName = playerNameInput.value || 'Игрок';
+      socket.emit('nameUpdate', playerName);
+    }
+
+    // Socket events
     socket.on('playTrack', file => {
       if (!isHost) playAudio(file);
     });
 
+    socket.on('scoreUpdate', newScore => {
+      if (!isHost) {
+        document.getElementById('clientScore').textContent = `Очки: ${newScore}`;
+      }
+    });
+
+    socket.on('nameUpdate', name => {
+      if (!isHost) {
+        document.getElementById('clientName').textContent = `Имя: ${name}`;
+      }
+    });
+
+    // Role selection
     document.getElementById('hostBtn').onclick = () => {
       isHost = true;
       document.getElementById('roleSelect').style.display = 'none';
+      document.getElementById('hostView').style.display = 'block';
     };
 
     document.getElementById('clientBtn').onclick = () => {
       isHost = false;
       document.getElementById('roleSelect').style.display = 'none';
+      document.getElementById('clientView').style.display = 'block';
+      document.getElementById('scoreDisplay').style.display = 'none';
     };
 
+    // Host interface generation
     const playersContainer = document.getElementById('playersContainer');
 
     for (let round = 1; round <= 17; round++) {

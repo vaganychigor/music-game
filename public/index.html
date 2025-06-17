@@ -1,154 +1,297 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Музыкальная игра</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      padding: 1rem;
-    }
-    .player {
-      margin-bottom: 0.5rem;
-    }
-    .alt {
-      background-color: #f0f0f0;
-      padding: 0.5rem;
-      border-radius: 5px;
-    }
-    .score-controls {
-      margin-bottom: 1rem;
-    }
-    .fixed-score {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      background: #fff3cd;
-      border-top: 2px solid #ffc107;
-      padding: 1rem;
-      text-align: center;
-      font-weight: bold;
-      z-index: 999;
-    }
-    .round {
-      border: 1px solid #ccc;
-      padding: 1rem;
-      margin-bottom: 1rem;
-      border-radius: 8px;
-      background-color: #fafafa;
-    }
-    .block-buttons {
-      margin-top: 0.5rem;
-    }
-    .player-label {
-      font-size: 0.9rem;
-      margin-bottom: 0.2rem;
-    }
-  </style>
+<meta charset="UTF-8" />
+<title>Музыкальная игра с очками и Socket.IO</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0 20px 80px;
+  }
+  h1 {
+    text-align: center;
+  }
+  .player-container {
+    margin-bottom: 30px;
+  }
+  .round-title {
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+  .audio-block {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+  }
+  .audio-wrapper {
+    flex: 1 1 220px;
+    padding: 10px;
+    border: 1px solid #aaa;
+    border-radius: 5px;
+    margin-bottom: 10px;
+  }
+  .audio-wrapper:nth-child(even) {
+    background-color: #eef6ff;
+  }
+  .audio-label {
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
+  button {
+    margin: 3px 5px 3px 0;
+    padding: 5px 12px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  input[type="number"] {
+    width: 90px;
+    padding: 4px;
+    font-size: 16px;
+    margin-left: 5px;
+  }
+  label {
+    font-weight: bold;
+  }
+  #scoreboard {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: #222;
+    color: white;
+    padding: 15px 20px;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    z-index: 9999;
+  }
+  #scoreboard label {
+    font-weight: normal;
+  }
+  .controls {
+    margin: 15px 0 30px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+</style>
 </head>
 <body>
-  <h1>Музыкальная игра</h1>
-  
-  <div>
-    <label>Имя игрока: <input type="text" id="playerName" value="Игрок 1"></label>
-    <label>Очки: <input type="number" id="score" value="0"></label>
-    <button onclick="updateScore(1000)">+1000</button>
-    <button onclick="updateScore(-500)">-500</button>
-    <button onclick="updateScore(-1000)">-1000</button>
-    <button onclick="resetAll()">Сброс</button>
-  </div>
 
-  <div id="roundsContainer"></div>
+<h1>Музыкальная игра с очками и синхронизацией</h1>
 
-  <div class="fixed-score">Текущие очки: <span id="fixedScore">0</span></div>
+<div class="controls">
+  <label for="playerName">Имя игрока:</label>
+  <input id="playerName" type="text" placeholder="Введите имя" />
+  <label for="playerScore">Очки:</label>
+  <input id="playerScore" type="number" value="0" />
+  <button id="add1000">+1000</button>
+  <button id="sub500">-500</button>
+  <button id="sub1000">-1000</button>
+  <button id="resetAll">Сбросить всё</button>
+</div>
 
-  <script>
-    let score = 0;
+<div id="roundsContainer">
+  <!-- Тут будут раунды -->
+</div>
 
-    function updateScore(amount) {
-      score += amount;
-      document.getElementById('score').value = score;
-      document.getElementById('fixedScore').textContent = score;
-    }
+<div id="scoreboard">
+  <span><b>Игрок:</b> <span id="sbName">—</span></span>
+  <span><b>Очки:</b> <span id="sbScore">0</span></span>
+</div>
 
-    function resetAll() {
-      document.getElementById('playerName').value = '';
-      score = 0;
-      document.getElementById('score').value = 0;
-      document.getElementById('fixedScore').textContent = 0;
-    }
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
 
-    function createPlayer(label, src, isAlt) {
+  // Инициализация переменных
+  let playerName = '';
+  let playerScore = 0;
+
+  // Элементы
+  const playerNameInput = document.getElementById('playerName');
+  const playerScoreInput = document.getElementById('playerScore');
+  const add1000Btn = document.getElementById('add1000');
+  const sub500Btn = document.getElementById('sub500');
+  const sub1000Btn = document.getElementById('sub1000');
+  const resetAllBtn = document.getElementById('resetAll');
+  const sbName = document.getElementById('sbName');
+  const sbScore = document.getElementById('sbScore');
+  const roundsContainer = document.getElementById('roundsContainer');
+
+  // Функция обновления табло очков
+  function updateScoreboard() {
+    sbName.textContent = playerName || '—';
+    sbScore.textContent = playerScore;
+  }
+
+  // Обновить локально и по сокету
+  function setScore(score) {
+    playerScore = Math.max(0, score); // не ниже 0
+    playerScoreInput.value = playerScore;
+    updateScoreboard();
+    socket.emit('updateScore', { name: playerName, score: playerScore });
+  }
+
+  // Обновить имя и сообщить сокету
+  function setName(name) {
+    playerName = name.trim();
+    updateScoreboard();
+    socket.emit('updateName', playerName);
+  }
+
+  // Кнопки управления очками
+  add1000Btn.onclick = () => setScore(playerScore + 1000);
+  sub500Btn.onclick = () => setScore(playerScore - 500);
+  sub1000Btn.onclick = () => setScore(playerScore - 1000);
+  resetAllBtn.onclick = () => {
+    // Сброс всех очков и имени локально и по сокету
+    setName('');
+    setScore(0);
+    resetRoundsScores();
+    socket.emit('resetAll');
+  };
+
+  playerNameInput.oninput = () => setName(playerNameInput.value);
+
+  playerScoreInput.onchange = () => {
+    const val = parseInt(playerScoreInput.value);
+    if (!isNaN(val)) setScore(val);
+  };
+
+  // Генерация раундов
+  function createRound(n) {
+    const div = document.createElement('div');
+    div.className = 'player-container';
+    div.dataset.round = n;
+
+    const title = document.createElement('div');
+    title.className = 'round-title';
+    title.textContent = `Раунд ${n}`;
+    div.appendChild(title);
+
+    // Кнопки +1000 -500 -1000 очков для этого раунда
+    const scoreControls = document.createElement('div');
+    scoreControls.style.marginBottom = '10px';
+
+    ['+1000', '-500', '-1000'].forEach(text => {
+      const btn = document.createElement('button');
+      btn.textContent = text;
+      btn.onclick = () => {
+        let change = 0;
+        if (text === '+1000') change = 1000;
+        else if (text === '-500') change = -500;
+        else if (text === '-1000') change = -1000;
+        setScore(playerScore + change);
+      };
+      scoreControls.appendChild(btn);
+    });
+    div.appendChild(scoreControls);
+
+    // Блок аудиоплееров
+    const audioBlock = document.createElement('div');
+    audioBlock.className = 'audio-block';
+
+    // Функция создания плеера с подписью
+    function createAudioWrapper(songNum, secNum) {
       const wrapper = document.createElement('div');
-      wrapper.className = 'player' + (isAlt ? ' alt' : '');
+      wrapper.className = 'audio-wrapper';
 
-      const lbl = document.createElement('div');
-      lbl.className = 'player-label';
-      lbl.textContent = label;
+      // Подпись
+      const label = document.createElement('div');
+      label.className = 'audio-label';
+      label.textContent = `Песня №${songNum}, ${secNum} секунд`;
+      wrapper.appendChild(label);
 
+      // Плеер
       const audio = document.createElement('audio');
       audio.controls = true;
-      const source = document.createElement('source');
-      source.src = src;
-      source.type = 'audio/wav';
-      audio.appendChild(source);
+      audio.src = `${n}_${songNum}_${secNum}.wav`;
+      audio.preload = 'none';
 
-      wrapper.appendChild(lbl);
       wrapper.appendChild(audio);
+
+      // При клике на play - отправляем событие на сервер, чтобы остальные тоже запустили
+      audio.onplay = () => {
+        socket.emit('playTrack', audio.src.split('/').pop());
+      };
+
       return wrapper;
     }
 
-    function createRoundBlock(roundNumber) {
-      const block = document.createElement('div');
-      block.className = 'round';
+    // В каждом раунде создаём 4 плеера, в 8-м — 5 плееров
+    const tracksCount = (n === 8) ? 5 : 4;
 
-      const title = document.createElement('h2');
-      title.textContent = `Раунд ${roundNumber}`;
-      block.appendChild(title);
+    for (let i = 1; i <= tracksCount; i++) {
+      // 10 секунд и 20 секунд
+      audioBlock.appendChild(createAudioWrapper(i, 10));
+      audioBlock.appendChild(createAudioWrapper(i, 20));
+    }
 
-      const players = [
-        [`Песня №1, 10 секунд`, `${roundNumber}_1_10.wav`],
-        [`Песня №1, 20 секунд`, `${roundNumber}_1_20.wav`],
-        [`Песня №2, 10 секунд`, `${roundNumber}_2_10.wav`],
-        [`Песня №2, 20 секунд`, `${roundNumber}_2_20.wav`],
-      ];
+    div.appendChild(audioBlock);
 
-      players.forEach(([label, src], i) => {
-        block.appendChild(createPlayer(label, src, i % 2 === 1));
-      });
+    return div;
+  }
 
-      // В 8 раунде добавим ещё 2 плеера
-      if (roundNumber === 8) {
-        block.appendChild(createPlayer('Песня №3, 10 секунд', `8_3_10.wav`, true));
-        block.appendChild(createPlayer('Песня №3, 20 секунд', `8_3_20.wav`, false));
+  // Добавляем раунды на страницу
+  for (let i = 1; i <= 17; i++) {
+    roundsContainer.appendChild(createRound(i));
+  }
+
+  // Обработка входящих сокет-событий
+
+  // Когда другой клиент воспроизводит трек — запускаем у себя
+  socket.on('playTrack', (trackName) => {
+    // Найти аудио с таким src и воспроизвести
+    const audios = document.querySelectorAll('audio');
+    for (const audio of audios) {
+      if (audio.src.endsWith(trackName)) {
+        if (audio.paused) {
+          audio.play().catch(() => {});
+        }
+        break;
       }
-
-      const btns = document.createElement('div');
-      btns.className = 'block-buttons';
-      const plus = document.createElement('button');
-      plus.textContent = '+1000';
-      plus.onclick = () => updateScore(1000);
-      const minus500 = document.createElement('button');
-      minus500.textContent = '-500';
-      minus500.onclick = () => updateScore(-500);
-      const minus1000 = document.createElement('button');
-      minus1000.textContent = '-1000';
-      minus1000.onclick = () => updateScore(-1000);
-
-      btns.appendChild(plus);
-      btns.appendChild(minus500);
-      btns.appendChild(minus1000);
-      block.appendChild(btns);
-
-      return block;
     }
+  });
 
-    // Генерация 17 раундов
-    const container = document.getElementById('roundsContainer');
-    for (let i = 1; i <= 17; i++) {
-      container.appendChild(createRoundBlock(i));
+  // При обновлении очков от сервера — обновляем локально
+  socket.on('updateScore', ({ name, score }) => {
+    // Если имя совпадает с текущим — обновляем очки
+    if (name === playerName) {
+      playerScore = score;
+      playerScoreInput.value = score;
+      updateScoreboard();
     }
-  </script>
+  });
+
+  // При обновлении имени от сервера
+  socket.on('updateName', (name) => {
+    if (name !== playerName) {
+      playerName = name;
+      playerNameInput.value = name;
+      updateScoreboard();
+    }
+  });
+
+  // При сбросе от сервера
+  socket.on('resetAll', () => {
+    playerNameInput.value = '';
+    playerScoreInput.value = 0;
+    playerName = '';
+    playerScore = 0;
+    updateScoreboard();
+    resetRoundsScores();
+  });
+
+  function resetRoundsScores() {
+    // Можно расширить логику если будут очки по раундам
+  }
+
+  // Начальное обновление табло
+  updateScoreboard();
+</script>
+
 </body>
-</html>
+</html

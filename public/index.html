@@ -63,10 +63,19 @@
   <div id="hostView" style="display:none;">
     <h1>Музыкальная Игра</h1>
 
-    <div>
-      <label>Имя игрока: <input id="playerNameInput" type="text" /></label>
-      <button onclick="sendName()">Сохранить</button>
-    </div>
+  <div>
+    <label>Имя игрока:
+      <input id="playerNameInput" type="text" />
+    </label>
+    <button onclick="sendName()">Сохранить</button>
+  </div>
+  
+  <div style="margin-top: 10px;">
+    <label>Очки вручную:
+      <input id="manualScoreInput" type="number" />
+    </label>
+    <button onclick="setManualScore()">Установить</button>
+  </div>
 
     <div id="playersContainer"></div>
   </div>
@@ -95,6 +104,16 @@
       score += amount;
       scoreEl.textContent = score;
       socket.emit('scoreUpdate', score);
+    }
+
+    function setManualScore() {
+      const input = document.getElementById('manualScoreInput');
+      const value = parseInt(input.value);
+      if (!isNaN(value)) {
+        score = value;
+        scoreEl.textContent = score;
+        socket.emit('scoreUpdate', score);
+      }
     }
 
     function setScore(newScore) {
